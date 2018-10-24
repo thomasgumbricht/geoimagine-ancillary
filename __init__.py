@@ -13,5 +13,5 @@ Author
 Thomas Gumbricht (thomas.gumbricht@karttur.com)
 
 """
-from .version import __version__, VERSION
+from .version import __version__, VERSION, metadataD
 from .ancillary import ProcessAncillary

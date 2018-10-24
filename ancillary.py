@@ -8,6 +8,7 @@ from os import path, makedirs, remove, system
 from sys import exit
 from geoimagine.kartturmain import Composition, RegionLayer
 import geoimagine.support.karttur_dt as mj_dt 
+from geoimagine.ancillary import ancillary_import_v73 as ancillary_import
 from geoimagine.gis.gis import GetVectorProjection
 from shutil import copyfile, copyfileobj
 
@@ -159,7 +160,6 @@ class AncillaryLayer(RegionLayer):
 class ProcessAncillary:
     'class for addint ancillary data'   
     def __init__(self, process,session,verbose):
-        #self.session = session
         self.verbose = verbose
         self.process = process            
         #direct to subprocess
@@ -167,14 +167,16 @@ class ProcessAncillary:
 
         if self.process.proc.processid == 'organizeancillary':
             self._OrganizeAncillary(session)
+        elif self.process.proc.processid == 'OrganizeGrace':
+            #This is the same as organizeancillary but from Grace
+            self._OrganizeAncillary(session)
         elif self.process.proc.processid == 'anciltxttodb':
             self._AncilTxtToDb(session)
         else:
             print (self.process.proc.processid)
             BKAJHF
             exit('Ancillary process not recognized in ProcessAncillary')
-        
-                   
+                       
     def _OrganizeAncillary(self,session):
 
         self.dsid  = '%(i)s.%(c)s.%(v)s.%(r)s' %{'i':self.process.proc.paramsD['instid'],'c':self.process.proc.paramsD['dsname'],'v':self.process.proc.paramsD['dsversion'],'r':self.process.proc.paramsD['regionid']}
@@ -197,7 +199,6 @@ class ProcessAncillary:
             
             for datum in self.process.dstLayerD[locus]:
                 print ('datum',datum)
-
                 print ('self.process.dstLayerD',self.process.dstLayerD)
                 print ('self.process.dstLayerD[locus][datum]',self.process.dstLayerD[locus][datum])
                 if len(self.process.dstLayerD[locus][datum]) == 0:
@@ -207,12 +208,11 @@ class ProcessAncillary:
                     exit(exitstr)
 
                 for comp in self.process.dstLayerD[locus][datum]:
-                    print ('comp',comp)
+                    #print ('comp',comp)
                     self.dstLayer = self.process.dstLayerD[locus][datum][comp]
-                    print (self.dstLayer)
-                    print (self.dstLayer.FPN)
-                    print (self.dstLayer.locus.locus)
-
+                    #print ('self.dstLayer',self.dstLayer)
+                    #print ('self.dstLayer.FPN',self.dstLayer.FPN)
+                    #print ('self.dstLayer.locus.locus',self.dstLayer.locus.locus)
 
                     if not self.dstLayer._Exists() or self.process.proc.overwrite:         
                         #Create the source layer
@@ -222,10 +222,10 @@ class ProcessAncillary:
                             print (warnstr)
                             BALLE
                             continue
-                        print ('self.dstLayer.comp.celltype',self.dstLayer.comp.celltype)
+
                         if self.dstLayer.comp.celltype.lower() in ['none','csv','txt']:
                             self._ImportText()
-                        elif self.dstLayer.comp.celltype == 'vector':
+                        elif self.dstLayer.comp.celltype.lower() == 'vector':
                             self._ImportVector()
                         else:
                             self._ImportRaster() 
@@ -235,14 +235,16 @@ class ProcessAncillary:
     def _SrcLayer(self,comp):
         '''
         '''
+        self.srcrawD = self.process.proc.srcraw.paramsD[comp]
 
-        srcrawD = self.process.proc.srcraw.paramsD[comp]
+        print ('self.process.srcpath.hdrfiletype',self.process.srcpath.hdrfiletype)
+  
         if self.process.proc.srcpathD['hdrfiletype'][0] == '.':
             ext = self.process.proc.srcpathD['hdrfiletype']
         else:
             ext = '.%s' %(self.process.proc.srcpathD['hdrfiletype'])
-        self.srcFN = '%(fn)s%(e)s' %{'fn':srcrawD['datafile'],'e':ext}            
-        self.srcFP = path.join('/Volumes',self.process.proc.srcpathD['volume'], srcrawD['datadir'])
+        self.srcFN = '%(fn)s%(e)s' %{'fn':self.srcrawD['datafile'],'e':ext}            
+        self.srcFP = path.join('/Volumes',self.process.proc.srcpathD['volume'], self.srcrawD['datadir'])
         self.srcFPN = path.join(self.srcFP,self.srcFN)
 
     def _ImportVector(self):
@@ -263,10 +265,38 @@ class ProcessAncillary:
         system(gdalcmd)
         #subprocess.check_call(gdalcmd)
 
-    def _ImportRaster(self, dstFPN):
+    def _ImportRaster(self):
         if self.verbose:
             print ('    Importing raster')
+
+        if self.process.srcpath.hdrfiletype.lower() == 'lis':
+            '''This is a very special format, only applies to gghydro'''
+            ancillary_import.GGHtranslate(self.Lin.FPN,self.Lout.FPN,self.Lout.comp.celltype,self.Lout.comp.cellnull,False)
+            
+        elif self.process.srcpath.hdrfiletype.lower() == '1x1':
+            '''This is a very special format, only applies to stillwell'''
+            ancillary_import.StillwellTranslate(self.Lin.FPN,self.Lout.FPN,self.Lout.comp.celltype,self.Lout.comp.cellnull,False)
+            
+        elif self.process.srcpath.datfiletype.lower() == 'trmm':
+            '''This is a very special format, only applies to TRMM data with north to the right'''
+            ancillary_import.TRMMTranslate(self.Lout.comp, self.Lin.FPN,self.Lout.FPN,False)
+            
+        elif self.process.params.importdef.lower() == 'grace':
+            '''This is a very special format, only applies to TRMM data with north to the right'''
+            #ancillary_import.TRMMTranslate(self.Lout.comp, self.Lin.FPN,self.Lout.FPN,False)
+            if not self.dstLayer.comp.celltype == 'Float32':
+                BALLE
+            if not self.dstLayer.comp.cellnull == 32767:
+                print (self.dstLayer.comp.cellnull)
+                BALLE
+  
+            ancillary_import.GRACETranslate(self.srcFPN, self.dstLayer.FPN, self.dstLayer.comp, False)
+        else:
+            print (self.Lin.FPN,self.Lout.FPN)
+            print (self.Lin.comp.dat)
+            print (self.Lin.comp.band)
             BALLE
+        
             
     def _ImportText(self):
         if self.verbose:
@@ -342,9 +372,7 @@ class ProcessAncillary:
                                     break
 
                     session._InsertClimateIndex(queryL)
-
-
-            
+      
     def _UpdateDB(self, layer, comp, session):
         
         srcrawD = self.process.proc.srcraw.paramsD[comp]
