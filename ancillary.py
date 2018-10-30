@@ -204,7 +204,7 @@ class ProcessAncillary:
                 if len(self.process.dstLayerD[locus][datum]) == 0:
                     exitstr = 'EXITING, no compositions defined in Ancillary.OrganizeAncillary'
                     print (exitstr)
-                    BALLE
+                    ERRORCHECK
                     exit(exitstr)
 
                 for comp in self.process.dstLayerD[locus][datum]:
@@ -220,7 +220,7 @@ class ProcessAncillary:
                         if not path.isfile(self.srcFPN):
                             warnstr = 'The ancillary source file %(fpn)s can not be found, skipping' %{'fpn':self.srcFPN}
                             print (warnstr)
-                            BALLE
+                            ERRORCHECK
                             continue
 
                         if self.dstLayer.comp.celltype.lower() in ['none','csv','txt']:
@@ -285,17 +285,17 @@ class ProcessAncillary:
             '''This is a very special format, only applies to TRMM data with north to the right'''
             #ancillary_import.TRMMTranslate(self.Lout.comp, self.Lin.FPN,self.Lout.FPN,False)
             if not self.dstLayer.comp.celltype == 'Float32':
-                BALLE
+                ERRORCHECK
             if not self.dstLayer.comp.cellnull == 32767:
                 print (self.dstLayer.comp.cellnull)
-                BALLE
+                ERRORCHECK
   
             ancillary_import.GRACETranslate(self.srcFPN, self.dstLayer.FPN, self.dstLayer.comp, False)
         else:
             print (self.Lin.FPN,self.Lout.FPN)
             print (self.Lin.comp.dat)
             print (self.Lin.comp.band)
-            BALLE
+            ERRORCHECK
         
             
     def _ImportText(self):
@@ -352,7 +352,7 @@ class ProcessAncillary:
                     if not path.isfile(self.srcLayer.FPN):
                         warnstr = 'The ancillary source file %(fpn)s can not be found, skipping' %{'fpn':self.srcLayer.FPN}
                         print (warnstr)
-                        BALLE
+                        ERRORCHECK
                         continue
                     queryL = []
                     if self.process.params.template == 'climateindex':

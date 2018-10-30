@@ -221,9 +221,9 @@ def GRACETranslate(inFPN,outFPN,comp,palette):
     cellnull = metaD['_FillValue']
     dataunit = metaD['units']
     if float(cellnull) != comp.cellnull:
-        BALLE
+        ERRORCHECK
     if dataunit != comp.dataunit:
-        BALLE
+        ERRORCHECK
 
     for line in open(inFPN):  # opened in text-mode; all EOLs are converted to '\n'
         if line[0:3] == 'HDR':
@@ -325,7 +325,7 @@ def TRMMTranslate(comp, inFPN, outFPN, palette):
     if comp.band == 'trmm-3b43v7-gauge-weight':
         #BAND = BAND*100 #relative weight converted to percent, no it seems to be percent already
         BAND.astype(np.uint8)
-        #BALLE
+        #ERRORCHECK
     else:
         BAND = BAND*days.days*24 #hourly rainfall converted to monthly
         BAND.astype(np.int16)
