@@ -1,12 +1,8 @@
 """
-kartturXML
+ancillary
 ==========================================
 
-Reads the standardizeed xml format of all process control for Karttur Geo Imagine framework
-
-Functions
----------
-readXML      -- reads the XML file
+Package belonging to Karttur´s GeoImagine Framework.
 
 Author
 ------

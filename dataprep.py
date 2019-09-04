@@ -4,7 +4,6 @@ Created on 29 Aug 2018
 @author: thomasgumbricht
 '''
 
-
 from osgeo import ogr,osr
 from sys import exit
 import os, glob, zipfile
@@ -42,7 +41,7 @@ def MGRSorginalNGAtilesOS(FP,dstFN):
                 cmd = '/Library/Frameworks/GDAL.framework/Versions/2.2/Programs/ogr2ogr -skipfailures %(dst)s %(src)s' %{'dst':dstFPN, 'src':shpFPN}
                 #print (cmd)
                 os.system(cmd)
-                #ERRORCHECK
+                #BALLE
             else:
                 cmd = '/Library/Frameworks/GDAL.framework/Versions/2.2/Programs/ogr2ogr -skipfailures -append %(dst)s %(src)s' %{'dst':dstFPN, 'src':shpFPN}
                 os.system(cmd)
@@ -128,7 +127,7 @@ def MGRSorginalNGAtiles(FP,dstFN):
                         polygeom = mj_gis.Geometry()
                         polygeom.MultPolyToSinglePoly(srcGeom.shapelyGeom)
                         #print (polygeom.shapelyGeom)
-                        #ERRORCHECK
+                        #BALLE
                         #for poly in srcGeom.shapelyGeom:
                         print (polygeom.shapelyGeom)
                         edgeL = list(polygeom.shapelyGeom.exterior.coords)
@@ -155,7 +154,7 @@ def MGRSorginalNGAtiles(FP,dstFN):
                             print ('dp',dp)
                             print ('edgeL',edgeL)
                             print ('edgeL',len(edgeL))
-                            ERRORCHECK
+                            BALLE
                         cornerD[c] = edgeL[dp]
                     #print (cornerD)
                     '''
@@ -216,7 +215,7 @@ def MGRSorginalNGAtiles(FP,dstFN):
                     #cornerGeom = mj_gis.Geometry()
                     #cornerGeom.SetShapelyGeom(corners)
 
-                    #ERRORCHECK
+                    #BALLE
                     #bounds = srcGeom.BoundsToPoly() 
                     #print (bounds)
                     '''
@@ -243,7 +242,7 @@ def MGRSorginalNGAtiles(FP,dstFN):
                     srcDS = None 
                     dstDS = None      
                             
-                    ERRORCHECK
+                    BALLE
                     '''
                     dstGeom = src_srs.ReprojectGeom(cornerGeom, dst_srs)
                     
@@ -281,7 +280,7 @@ def MGRSorginalNGAtiles(FP,dstFN):
                             #    boundsL[0][0] = boundsL[3][0] = boundsL[4][0] = -180
                             print (printstr)
                             print (boundsL)
-                            ERRORCHECK
+                            BALLE
 
                         elif boundsL[1][0] - boundsL[0][0] > 6.0001:
                             printstr = 'Skipping %(mgrs)s' %{'mgrs':MGRS}
@@ -294,19 +293,19 @@ def MGRSorginalNGAtiles(FP,dstFN):
                             testGeom.GeomFromFeature(feature)
                             print (testGeom.shapelyGeom)
 
-                            ERRORCHECK
+                            BALLE
                         elif round(min(lonL),2) < -180 or  round(max(lonL),2) > 180:
                             printstr = 'Skipping %(mgrs)s' %{'mgrs':MGRS}
                             
                             print (printstr)
                             print (boundsL)
-                            ERRORCHECK
+                            BALLE
                         elif round(min(latL),2) < -90 or  round(max(latL),2) > 90:
                             printstr = 'Skipping %(mgrs)s' %{'mgrs':MGRS}
                             
                             print (printstr)
                             print (boundsL)
-                            ERRORCHECK
+                            BALLE
                             
                         else:
     

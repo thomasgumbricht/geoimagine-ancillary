@@ -15,6 +15,7 @@ import struct
 from osgeo import osr
 import os
 import numpy as np
+from geoimagine.support import karttur_dt as mj_dt
 
 #import mj_datetime_v70 as mj_dt
 
@@ -221,9 +222,9 @@ def GRACETranslate(inFPN,outFPN,comp,palette):
     cellnull = metaD['_FillValue']
     dataunit = metaD['units']
     if float(cellnull) != comp.cellnull:
-        ERRORCHECK
+        BALLE
     if dataunit != comp.dataunit:
-        ERRORCHECK
+        BALLE
 
     for line in open(inFPN):  # opened in text-mode; all EOLs are converted to '\n'
         if line[0:3] == 'HDR':
@@ -264,16 +265,19 @@ def GRACETranslate(inFPN,outFPN,comp,palette):
     dst_ds = None # Flush the dataset to disk
     dsOut = None
 
-def TRMMTranslate(comp, inFPN, outFPN, palette):
-    import numpy as np
-    from mj_gis_v70 import RasterOpenGetFirstLayer, MjProj, RasterDataSource, RasterLayer
-    inFP, inFN = os.path.split(inFPN)
+def TRMMTranslate(srcFPN, dstFPN, comp, palette):
+    #import numpy as np
+    from geoimagine.gis.mj_gis_v80 import RasterOpenGetFirstLayer, MjProj, RasterDataSource, RasterLayer
+    #from mj_gis_v80 import 
+    srcFP, srcFN = os.path.split(srcFPN)
     
-    tmpFPN = os.path.join(inFP,'tmp.tif')
+    tmpFPN = os.path.join(srcFP,'tmp.tif')
     if os.path.isfile(tmpFPN):
         os.remove(tmpFPN)
 
-    oscmd = '/Library/Frameworks/GDAL.framework/Versions/1.11/Programs/gdal_translate HDF4_SDS:UNKNOWN:"%(in)s"' %{'in':inFPN}
+    #oscmd = '/Library/Frameworks/GDAL.framework/Versions/2.1/Programs/gdal_translate HDF4_SDS:UNKNOWN:"%(in)s"' %{'in':inFPN}
+
+    oscmd = '/Library/Frameworks/GDAL.framework/Versions/2.1/Programs/gdal_translate HDF4_SDS:UNKNOWN:"%(src)s"' %{'src':srcFPN}
     if comp.band == 'trmm-3b43v7-precip':
         oscmd = '%(cmd)s:0:precipitation %(tmp)s' %{'cmd':oscmd, 'tmp':tmpFPN}
     elif comp.band == 'trmm-3b43v7-relerr':
@@ -286,7 +290,7 @@ def TRMMTranslate(comp, inFPN, outFPN, palette):
     
     os.system(oscmd)
 
-    yyyymmdd = inFN.split('.')[1]
+    yyyymmdd = srcFN.split('.')[1]
 
     startDate = mj_dt.yyyymmddDate(yyyymmdd)
     endDate = mj_dt.AddMonth(startDate,1)
@@ -317,32 +321,112 @@ def TRMMTranslate(comp, inFPN, outFPN, palette):
     tarLayer.lins = YSize
     tarLayer.geotrans = gt
     tarLayer.projection = spatialRef.proj_cs.ExportToWkt()
-    #set the datasource of the layer
-    #tarLayer.SetDS(tarDS)
-    #tarLayer.SetSpatialRef(tarProj)
+
+
     BAND = np.rot90(srcLayer.NPBAND)
 
     if comp.band == 'trmm-3b43v7-gauge-weight':
         #BAND = BAND*100 #relative weight converted to percent, no it seems to be percent already
         BAND.astype(np.uint8)
-        #ERRORCHECK
+        #BALLE
     else:
         BAND = BAND*days.days*24 #hourly rainfall converted to monthly
         BAND.astype(np.int16)
         if np.min(BAND) < 0:
-            print ('nodata in',outFPN)
+            print ('nodata in',srcFPN)
             BAND[BAND < 0] = -32768
+    
+    tarLayer.BAND = BAND
+
+    tarLayer.SetSpatialRef(spatialRef)
+
+    tarLayer.comp = comp
+    
+    tarDS.CreateGDALraster(dstFPN,tarLayer) 
+    
+    srcDS.CloseDS()
+    tarDS.CloseDS()
+    
+def IMERGTranslate(srcFPN, dstFPN, comp, yyyymmdd, palette):
+    #import numpy as np
+    from geoimagine.gis.mj_gis_v80 import RasterOpenGetFirstLayer, MjProj, RasterDataSource, RasterLayer
+    #from mj_gis_v80 import 
+    srcFP, srcFN = os.path.split(srcFPN)
+    
+    tmpFPN = os.path.join(srcFP,'tmp.tif')
+    if os.path.isfile(tmpFPN):
+        os.remove(tmpFPN)
+
+    oscmd = '/Library/Frameworks/GDAL.framework/Versions/2.2/Programs/gdal_translate HDF5:"%(src)s"' %{'src':srcFPN}
+
+    if comp.band == 'imerg-3bv05b-precip':
+        oscmd = '%(cmd)s://Grid/precipitation %(tmp)s' %{'cmd':oscmd, 'tmp':tmpFPN}
+    elif comp.band == 'imerg-3bv05b-relerr':
+        oscmd = '%(cmd)s://Grid/randomError %(tmp)s' %{'cmd':oscmd, 'tmp':tmpFPN}
+    elif comp.band == 'imerg-3bv05b-quality':
+        oscmd = '%(cmd)s://Grid/precipitationQualityIndex %(tmp)s' %{'cmd':oscmd, 'tmp':tmpFPN}
+    elif comp.band == 'imerg-3bv05b-liquid':
+        oscmd = '%(cmd)s://Grid/probabilityLiquidPrecipitation %(tmp)s' %{'cmd':oscmd, 'tmp':tmpFPN}
+    elif comp.band == 'imerg-3bv05b-gauge-weight':
+        oscmd = '%(cmd)s://Grid/gaugeRelativeWeighting %(tmp)s' %{'cmd':oscmd, 'tmp':tmpFPN}
+
+    else:
+        print ('unrecognised band',comp.band)
+        JAHGFASFGJKAS
+
+    os.system(oscmd)
+
+    startDate = mj_dt.yyyymmddDate(yyyymmdd)
+    endDate = mj_dt.AddMonth(startDate,1)
+    days = mj_dt.GetDeltaDays(startDate, endDate)
+    
+    srcDS,srcLayer = RasterOpenGetFirstLayer(tmpFPN,'read')
+
+    srcLayer.ReadBand()
+    srcLayer.NPBAND
+
+    #swap x and y
+    XSize = srcLayer.layer.YSize
+    YSize = srcLayer.layer.XSize
+    #set pixelsiae:
+    pixelSize = 0.10
+    minX = -180
+    maxY = 90
+    gt = (minX, pixelSize, 0, maxY, 0, -pixelSize)
+    spatialRef = MjProj()
+    spatialRef.SetFromEPSG(4326)
+    spatialRef.SetGeoTrans(gt)
+    
+    tarDS = RasterDataSource()
+    
+    tarLayer = RasterLayer()
+    tarLayer.cols = XSize
+    tarLayer.lins = YSize
+    tarLayer.geotrans = gt
+    tarLayer.projection = spatialRef.proj_cs.ExportToWkt()
+    
+    #Rotate
+    BAND = np.rot90(srcLayer.NPBAND)
+
+    if comp.band in  ['imerg-3bv05b-gauge-weight','imerg-3bv05b-gauge-liquid']:
+        BAND[BAND < 0] = 255
+        BAND.astype(np.uint8)
+    elif comp.band == 'imerg-3bv05b-quality':
+        BAND = BAND*100
+        BAND[BAND < 0] = -32768
+
+    else:
+        BAND = BAND*days.days*24 #hourly rainfall converted to monthly
+        BAND.astype(np.int16)
+        BAND[BAND < 0] = -32768
     
     tarLayer.BAND = BAND
     #tarLayer.BAND.astype(np.int16)
     tarLayer.SetSpatialRef(spatialRef)
-    #tarLayer.SetGeotrans(gt)
 
-    #tarLayer.comp = Composition('Float32','-32768')
-    #tarLayer.comp = Composition('int16','-32768')
     tarLayer.comp = comp
     
-    tarDS.CreateGDALraster(outFPN,tarLayer) 
+    tarDS.CreateGDALraster(dstFPN,tarLayer) 
     
     srcDS.CloseDS()
     tarDS.CloseDS()
